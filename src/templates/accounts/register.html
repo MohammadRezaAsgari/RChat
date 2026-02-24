@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Register | RChat{% endblock %}
+
+{% block content %}
+<div class="glass-container">
+    <h1>Create Account</h1>
+    <p class="subtitle">Join RChat and start messaging.</p>
+
+    <!-- Django Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+
+        {% for field in form %}
+            <div class="form-group">
+                <label>{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <div class="message error">
+                        {{ field.errors|striptags }}
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <button type="submit" class="btn-primary">Register</button>
+    </form>
+
+    <p style="text-align:center; margin-top:20px; font-size:14px;">
+        Already have an account?
+        <a href="{% url 'login' %}">Login</a>
+    </p>
+</div>
+{% endblock %}

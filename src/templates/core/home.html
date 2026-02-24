@@ -1,0 +1,108 @@
+{% extends "home_base.html" %}
+
+{% block title %}RChat Home{% endblock %}
+
+{% block content %}
+<div class="home-container">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h3>Chats</h3>
+        <a href="#" class="button" onclick="document.getElementById('new-chat-form').style.display='block'; return false;">+ New Chat</a>
+
+        <ul class="chat-list">
+            {% for chat in chats %}
+                <li>
+                    <a href="{% url 'home_active_chat' chat.uuid %}" class="{% if active_chat and active_chat.uuid == chat.uuid %}active{% endif %}">
+                        {% if chat.is_group_chat %}
+                            {{ chat.name|default:"Group Chat" }}
+                        {% else %}
+                            {% for u in chat.participants.all %}
+                                {% if u != request.user %}
+                                    {{ u.username }}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </a>
+                </li>
+            {% empty %}
+                <li>No chats yet.</li>
+            {% endfor %}
+        </ul>
+
+        <!-- New Chat Form -->
+        <div id="new-chat-form">
+            <form method="post" action="{% url 'home' %}">
+                {% csrf_token %}
+                <label>Name (for group chat)</label>
+                <input type="text" name="name" placeholder="Group name">
+
+                <h5>Participants:</h5>
+                {% for user in users %}
+                    <label>
+                        <input type="checkbox" name="participants" value="{{ user.id }}">
+                        {{ user.username }} ({{ user.email }})
+                    </label><br>
+                {% endfor %}
+
+                <button type="submit">Create Chat</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="chat-area">
+        {% if active_chat %}
+            <h3>
+                {% if active_chat.is_group_chat %}
+                    {{ active_chat.name|default:"Group Chat" }}
+                {% else %}
+                    {% for u in active_chat.participants.all %}
+                        {% if u != request.user %}
+                            {{ u.username }}
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </h3>
+
+            <div id="messages" class="messages">
+                {% for message in active_chat.messages.all %}
+                    <div class="message-item {% if message.sender == request.user %}me{% endif %}">
+                        <p><b>{{ message.sender.username }}:</b> {{ message.content }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="chat-input">
+                <input id="chat-message-input" type="text" placeholder="Type a message...">
+                <button id="chat-message-submit">Send</button>
+            </div>
+
+            <script>
+                const chatUuid = "{{ active_chat.uuid }}";
+                const ws = new WebSocket("ws://" + window.location.host + "/ws/chat/" + chatUuid + "/");
+
+                ws.onmessage = function(e) {
+                    const data = JSON.parse(e.data);
+                    const log = document.getElementById("messages");
+                    const div = document.createElement("div");
+                    div.className = "message-item" + (data.user == "{{ request.user.username }}" ? " me" : "");
+                    div.innerHTML = "<p><b>" + data.user + ":</b> " + data.message + "</p>";
+                    log.appendChild(div);
+                    log.scrollTop = log.scrollHeight;
+                };
+
+                document.getElementById("chat-message-submit").onclick = function() {
+                    const input = document.getElementById("chat-message-input");
+                    if(input.value.trim() === "") return;
+                    ws.send(JSON.stringify({'message': input.value}));
+                    input.value = '';
+                };
+            </script>
+        {% else %}
+            <p>Select a chat from the left to start messaging.</p>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
