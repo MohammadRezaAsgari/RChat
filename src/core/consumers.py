@@ -1,7 +1,6 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.shortcuts import get_object_or_404
-from .models import Chat, Message
 from channels.db import database_sync_to_async
 
 
@@ -42,5 +41,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_message(self, user, message):
+        from core.models import Chat, Message
+
         chat = get_object_or_404(Chat, uuid=self.chat_uuid)
         return Message.objects.create(chat=chat, sender=user, content=message)

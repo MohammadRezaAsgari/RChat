@@ -7,6 +7,7 @@
 
     <!-- Sidebar -->
     <div class="sidebar">
+        <h2>Hi {{request.user.username}}!</h2>
         <h3>Chats</h3>
         <a href="#" class="button" onclick="document.getElementById('new-chat-form').style.display='block'; return false;">+ New Chat</a>
 
@@ -68,7 +69,9 @@
             <div id="messages" class="messages">
                 {% for message in active_chat.messages.all %}
                     <div class="message-item {% if message.sender == request.user %}me{% endif %}">
-                        <p><b>{{ message.sender.username }}:</b> {{ message.content }}</p>
+                        <p>
+                        <b>{% if message.sender != request.user and active_chat.is_group_chat %} {{ message.sender.username }}: {% endif %}</b> 
+                        {{ message.content }}</p>
                     </div>
                 {% endfor %}
             </div>
