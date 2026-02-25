@@ -333,6 +333,63 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+        /* Mobile menu button */
+        .mobile-menu-btn {
+            display: none;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            font-size: 20px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        /* Overlay */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(3px);
+            z-index: 9;
+        }
+
+        /* Responsive behavior */
+        @media(max-width: 900px){
+
+            .mobile-menu-btn {
+                display: inline-block;
+            }
+
+            .home-container {
+                position: relative;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                width: 260px;
+                height: 100%;
+                z-index: 10;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            .chat-area {
+                width: 100%;
+                padding-top: 15px;
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+        }
     </style>
 
 </head>
@@ -386,6 +443,31 @@
 
     });
     </script>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+
+        const sidebar = document.getElementById("sidebar");
+        const toggleBtn = document.getElementById("sidebar-toggle");
+        const overlay = document.getElementById("sidebar-overlay");
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener("click", function() {
+                sidebar.classList.toggle("active");
+                overlay.classList.toggle("active");
+            });
+        }
+
+        if (overlay) {
+            overlay.addEventListener("click", function() {
+                sidebar.classList.remove("active");
+                overlay.classList.remove("active");
+            });
+        }
+
+    });
+    </script>
+
 <body>
 {% block content %}{% endblock %}
 </body>

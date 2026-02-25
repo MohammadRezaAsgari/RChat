@@ -5,8 +5,10 @@
 {% block content %}
 <div class="home-container">
 
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
         <h2>Hi {{request.user.username}}!
         
         <form method="post" action="{% url 'logout' %}">
@@ -69,6 +71,8 @@
 
     <!-- Chat Area -->
     <div class="chat-area">
+        <button id="sidebar-toggle" class="mobile-menu-btn">☰</button>
+
         {% if active_chat %}
             <h3>
                 {% if active_chat.is_group_chat %}
@@ -143,6 +147,13 @@
 
                 document.getElementById("chat-message-submit").onclick = function() {
                     const input = document.getElementById("chat-message-input");
+                    input.addEventListener("keydown", function(e) {
+                        if (e.key === "Enter" && !e.shiftKey) { // Enter without Shift
+                            e.preventDefault(); // Prevent newline
+                            document.getElementById("chat-message-submit").click();
+                        }
+                    });
+
                     if(input.value.trim() === "") return;
 
                     ws.send(JSON.stringify({
@@ -150,6 +161,8 @@
                     }));
 
                     input.value = '';
+                    input.focus();
+                    scrollToBottomInstant();
                 };
             </script>
         {% else %}
