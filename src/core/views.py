@@ -2,7 +2,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.contrib import messages
-from core.models import Chat
+from django.db.models import Prefetch, Max
+
+from core.models import Chat, Message
 
 User = get_user_model()
 
@@ -43,7 +45,18 @@ def home_view(request, active_chat_uuid=None):
 
         return redirect("home_active_chat", active_chat_uuid=chat.uuid)
 
-    chats = Chat.objects.filter(participants=request.user).order_by("-created_at")
+    chats = (
+        Chat.objects.filter(participants=request.user)
+        .prefetch_related(
+            Prefetch(
+                "messages",
+                queryset=Message.objects.order_by("-timestamp"),
+                to_attr="ordered_messages",
+            )
+        )
+        .annotate(last_message_time=Max("messages__timestamp"))
+        .order_by("-last_message_time")
+    )
 
     active_chat = None
     if active_chat_uuid:

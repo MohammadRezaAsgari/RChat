@@ -19,23 +19,42 @@
         <a href="#" id="toggle-new-chat" class="button">+ New Chat</a>
     
         <ul class="chat-list">
-            {% for chat in chats %}
-                <li>
-                    <a href="{% url 'home_active_chat' chat.uuid %}" class="{% if active_chat and active_chat.uuid == chat.uuid %}active{% endif %}">
-                        {% if chat.is_group_chat %}
-                            {{ chat.name|default:"Group Chat" }}
-                        {% else %}
+        {% for chat in chats %}
+            <li>
+                <a href="{% url 'home_active_chat' chat.uuid %}"
+                class="chat-item {% if active_chat and active_chat.uuid == chat.uuid %}active{% endif %}">
+
+                    <!-- Username -->
+                    <div class="chat-top">
+                        <span class="chat-username">
                             {% for u in chat.participants.all %}
                                 {% if u != request.user %}
                                     {{ u.username }}
                                 {% endif %}
                             {% endfor %}
+                        </span>
+
+                        {% if chat.ordered_messages %}
+                            <span class="chat-time">
+                                {{ chat.ordered_messages.0.timestamp|date:"H:i" }}
+                            </span>
                         {% endif %}
-                    </a>
-                </li>
-            {% empty %}
-                <li>No chats yet.</li>
-            {% endfor %}
+                    </div>
+
+                    <!-- Last Message Preview -->
+                    <div class="chat-preview">
+                        {% if chat.ordered_messages %}
+                            {{ chat.ordered_messages.0.content|truncatechars:35 }}
+                        {% else %}
+                            No messages yet...
+                        {% endif %}
+                    </div>
+
+                </a>
+            </li>
+        {% empty %}
+            <li>No chats yet.</li>
+        {% endfor %}
         </ul>
 
         <!-- New Chat Form -->
@@ -83,6 +102,13 @@
             </div>
 
             <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    const messagesBox = document.getElementById("messages");
+                    if (messagesBox) {
+                        messagesBox.scrollTop = messagesBox.scrollHeight;
+                    }
+                });
+
                 const chatUuid = "{{ active_chat.uuid }}";
                 const ws = new WebSocket("ws://" + window.location.host + "/ws/chat/" + chatUuid + "/");
 
@@ -109,6 +135,10 @@
                     log.appendChild(div);
 
                     log.scrollTop = log.scrollHeight;
+                    const isNearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 100;
+                    if (isNearBottom) {
+                        setTimeout(() => {log.scrollTop = log.scrollHeight;},50);
+                    }
                 };
 
                 document.getElementById("chat-message-submit").onclick = function() {
