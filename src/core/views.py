@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
+from django.contrib import messages
 from core.models import Chat
 
 User = get_user_model()
@@ -8,48 +9,53 @@ User = get_user_model()
 
 @login_required
 def home_view(request, active_chat_uuid=None):
-    """
-    Home page:
-    - Sidebar with all chats of the user
-    - Button + form to create new chat
-    - Right side: active chat messages if selected
-    """
-    # Handle "Create New Chat" form submission
+
     if request.method == "POST":
-        participant_ids = request.POST.getlist("participants")
-        is_group = len(participant_ids) > 1
-        name = request.POST.get("name") if is_group else None
+        username = request.POST.get("username")
 
-        # Create the chat
-        chat = Chat.objects.create(name=name, is_group_chat=is_group)
-        # Add current user as participant
-        chat.participants.add(request.user)
-        # Add selected participants
-        participants = User.objects.filter(id__in=participant_ids)
-        chat.participants.add(*participants)
+        if not username:
+            messages.error(request, "Please enter a username.")
+            return redirect("home")
 
-        # Redirect to newly created chat
+        try:
+            other_user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            messages.error(request, "User not found.")
+            return redirect("home")
+
+        if other_user == request.user:
+            messages.error(request, "You cannot chat with yourself.")
+            return redirect("home")
+
+        # Check if chat already exists
+        existing_chat = (
+            Chat.objects.filter(participants=request.user)
+            .filter(participants=other_user, is_group_chat=False)
+            .first()
+        )
+
+        if existing_chat:
+            return redirect("home_active_chat", active_chat_uuid=existing_chat.uuid)
+
+        # Create new private chat
+        chat = Chat.objects.create(is_group_chat=False)
+        chat.participants.add(request.user, other_user)
+
         return redirect("home_active_chat", active_chat_uuid=chat.uuid)
 
-    # Get all chats where current user is participant
     chats = Chat.objects.filter(participants=request.user).order_by("-created_at")
 
-    # Active chat (if URL has active_chat_uuid)
     active_chat = None
     if active_chat_uuid:
         active_chat = get_object_or_404(Chat, uuid=active_chat_uuid)
         if request.user not in active_chat.participants.all():
-            active_chat = None  # Security check: user must be participant
-
-    # All other users for creating chats
-    users = User.objects.exclude(id=request.user.id)
+            active_chat = None
 
     return render(
         request,
         "core/home.html",
         {
             "chats": chats,
-            "users": users,
             "active_chat": active_chat,
         },
     )

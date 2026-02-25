@@ -7,10 +7,17 @@
 
     <!-- Sidebar -->
     <div class="sidebar">
-        <h2>Hi {{request.user.username}}!</h2>
-        <h3>Chats</h3>
-        <a href="#" class="button" onclick="document.getElementById('new-chat-form').style.display='block'; return false;">+ New Chat</a>
+        <h2>Hi {{request.user.username}}!
+        
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button class="logout-btn">Logout</button>
+        </form>
+        </h2>
 
+        <h3>Chats</h3>
+        <a href="#" id="toggle-new-chat" class="button">+ New Chat</a>
+    
         <ul class="chat-list">
             {% for chat in chats %}
                 <li>
@@ -33,20 +40,10 @@
 
         <!-- New Chat Form -->
         <div id="new-chat-form">
-            <form method="post" action="{% url 'home' %}">
+            <form method="post">
                 {% csrf_token %}
-                <label>Name (for group chat)</label>
-                <input type="text" name="name" placeholder="Group name">
-
-                <h5>Participants:</h5>
-                {% for user in users %}
-                    <label>
-                        <input type="checkbox" name="participants" value="{{ user.id }}">
-                        {{ user.username }} ({{ user.email }})
-                    </label><br>
-                {% endfor %}
-
-                <button type="submit">Create Chat</button>
+                <input type="text" name="username" placeholder="Enter username..." required>
+                <button type="submit">Start Chat</button>
             </form>
         </div>
     </div>
@@ -69,9 +66,13 @@
             <div id="messages" class="messages">
                 {% for message in active_chat.messages.all %}
                     <div class="message-item {% if message.sender == request.user %}me{% endif %}">
-                        <p>
-                        <b>{% if message.sender != request.user and active_chat.is_group_chat %} {{ message.sender.username }}: {% endif %}</b> 
-                        {{ message.content }}</p>
+                        <div class="message-bubble">
+                            <p><b>{% if message.sender != request.user and active_chat.is_group_chat %} {{ message.sender.username }}: {% endif %}</b>
+                            {{ message.content }}</p>
+                            <span class="message-time">
+                                {{ message.timestamp|date:"M d, H:i" }}
+                            </span>
+                        </div>
                     </div>
                 {% endfor %}
             </div>
@@ -88,17 +89,36 @@
                 ws.onmessage = function(e) {
                     const data = JSON.parse(e.data);
                     const log = document.getElementById("messages");
+
                     const div = document.createElement("div");
                     div.className = "message-item" + (data.user == "{{ request.user.username }}" ? " me" : "");
-                    div.innerHTML = "<p><b>" + data.user + ":</b> " + data.message + "</p>";
+
+                    const bubble = document.createElement("div");
+                    bubble.className = "message-bubble";
+
+                    const content = document.createElement("p");
+                    content.innerText = data.message;
+
+                    const time = document.createElement("span");
+                    time.className = "message-time";
+                    time.innerText = data.timestamp;
+
+                    bubble.appendChild(content);
+                    bubble.appendChild(time);
+                    div.appendChild(bubble);
                     log.appendChild(div);
+
                     log.scrollTop = log.scrollHeight;
                 };
 
                 document.getElementById("chat-message-submit").onclick = function() {
                     const input = document.getElementById("chat-message-input");
                     if(input.value.trim() === "") return;
-                    ws.send(JSON.stringify({'message': input.value}));
+
+                    ws.send(JSON.stringify({
+                        'message': input.value
+                    }));
+
                     input.value = '';
                 };
             </script>

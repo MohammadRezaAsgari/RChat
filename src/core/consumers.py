@@ -1,4 +1,6 @@
 import json
+
+from django.utils.timezone import localtime
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.shortcuts import get_object_or_404
 from channels.db import database_sync_to_async
@@ -29,7 +31,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Broadcast message to room group
         await self.channel_layer.group_send(
             self.room_group_name,
-            {"type": "chat_message", "message": message, "user": user.username},
+            {
+                "type": "chat_message",
+                "message": message,
+                "user": user.username,
+                "timestamp": localtime().strftime("%b %d, %H:%M"),
+            },
         )
 
     async def chat_message(self, event):
@@ -37,7 +44,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         user = event["user"]
 
         # Send message to WebSocket
-        await self.send(text_data=json.dumps({"message": message, "user": user}))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "message": message,
+                    "user": user,
+                    "timestamp": event["timestamp"],
+                }
+            )
+        )
 
     @database_sync_to_async
     def save_message(self, user, message):
